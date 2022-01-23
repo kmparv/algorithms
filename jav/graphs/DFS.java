@@ -1,3 +1,8 @@
+/**
+ * @author 	: parveenkumar (kmparv)
+ * @created	: 01.23.2022 
+ * */
+
 package graphs;
 
 import java.io.File;
@@ -32,6 +37,30 @@ public class DFS {
 		initDFS(V);
 		dfs_parent = new ArrayList<Integer>();
 		dfs_parent.addAll(Collections.nCopies(V, 0));
+	}
+    private static void initArticulationPointAndBridge(int V) {
+		initGraphCheck(V);
+		dfs_low = new ArrayList<Integer>();
+		dfs_low.addAll(Collections.nCopies(V, 0));
+		articulation_vertex = new ArrayList<Boolean>();
+		articulation_vertex.addAll(Collections.nCopies(V, false));
+		dfsNumberCounter = 0;
+	}
+
+	private static void initTarjanSCC(int V) {
+		initGraphCheck(V);
+		dfs_low = new ArrayList<Integer>();
+		dfs_low.addAll(Collections.nCopies(V, 0));
+		dfsNumberCounter = 0;
+		numComp = 0;
+		st = new Stack<Integer>();
+		visited = new ArrayList<Boolean>();
+		visited.addAll(Collections.nCopies(V, false));
+	}
+
+	private static void initTopologicalSort(int V) {
+		initDFS(V);
+		topologicalSort = new ArrayList<Integer>();
 	}
 
 	private static void dfs(int u) {
@@ -74,6 +103,69 @@ public class DFS {
 		}
 		dfs_num.set(u, DFS_BLACK);
 	}
+    private static void articulationPointAndBridge(int u) {
+		dfs_low.set(u, dfsNumberCounter);
+		dfs_num.set(u, dfsNumberCounter++);
+		for (int i = 0; i < AdjList.get(u).size(); i++) {
+			Integer[] v = AdjList.get(u).get(i);
+			if (dfs_num.get(v[0]) == DFS_WHITE) {
+				dfs_parent.set(v[0], u);
+				if (dfsRoot == u) {
+					rootChildren++;
+				}
+				articulationPointAndBridge(v[0]);
+				if (dfs_low.get(v[0]) >= dfs_num.get(u)) {
+					articulation_vertex.set(u, true);
+				}
+				if (dfs_low.get(v[0]) > dfs_num.get(u)) {
+					System.out.println(" Edge ( " + u + ", " + v[0] + " ) is a bridge");
+				}
+				dfs_low.set(u, Math.min(dfs_low.get(u), dfs_low.get(v[0])));
+			} else if (v[0] != dfs_parent.get(u)) {
+				dfs_low.set(u, Math.min(dfs_low.get(u), dfs_num.get(v[0])));
+			}
+		}
+	}
+
+	private static void tarjanSCC(int u) {
+		dfs_num.set(u, dfsNumberCounter);
+		dfs_low.set(u, dfsNumberCounter++);
+		st.push(u);
+		visited.set(u, true);
+
+		for (int i = 0; i < AdjList.get(u).size(); i++) {
+			Integer[] v = AdjList.get(u).get(i);
+			if (dfs_num.get(v[0]) == DFS_WHITE) {
+				tarjanSCC(v[0]);
+				if (visited.get(v[0])) {
+					dfs_low.set(u, Math.min(dfs_low.get(u), dfs_low.get(v[0])));
+				}
+			}
+		}
+		if (dfs_low.get(u) == dfs_num.get(u)) {
+			System.out.print("SCC : " + (++numComp));
+			while (true) {
+				int v = st.pop();
+				visited.set(v, false);
+				System.out.print(" " + v);
+				if (u == v)
+					break;
+			}
+			System.out.println();
+		}
+	}
+
+	private static void topoSort(int u) {
+		dfs_num.set(u, DFS_BLACK);
+		for (int i = 0; i < AdjList.get(u).size(); i++) {
+			Integer[] v = AdjList.get(u).get(i);
+			if(dfs_num.get(v[0]) == DFS_WHITE){
+				topoSort(v[0]);
+			}
+		}
+		topologicalSort.add(u);
+	}
+
 
 	@SuppressWarnings("resource")
 	public static void main(String[] args) throws FileNotFoundException {
@@ -130,6 +222,42 @@ public class DFS {
 				graphCheck(i);
 			}
 		}
+        initArticulationPointAndBridge(V);
+		System.out.println("Articulation Points & Bridges (the input graph must be UNDIRECTED)");
+		System.out.println("Bridges: ");
+		for (int i = 0; i < V; i++) {
+			if (dfs_num.get(i) == DFS_WHITE) {
+				dfsRoot = i;
+				rootChildren = 0;
+				articulationPointAndBridge(i);
+				articulation_vertex.set(dfsRoot, (rootChildren > 1)); // special case
+			}
+		}
+		System.out.println("Articulation Points : ");
+		for (int i = 0; i < V; i++) {
+			if (articulation_vertex.get(i))
+				System.out.println("Vertex : " + i);
+		}
+
+		initTarjanSCC(V);
+		System.out.println("Strongly Connected Components (the input graph must be DIRECTED)");
+		for (int i = 0; i < V; i++) {
+			if (dfs_num.get(i) == DFS_WHITE) {
+				tarjanSCC(i);
+			}
+		}
+		
+		initTopologicalSort(V);
+		System.out.println("Toplogical Sort (the input graph must be DAG) ");
+		for(int i = 0; i < V; i++) {
+			if(dfs_num.get(i) == DFS_WHITE) {
+				topoSort(i);
+			}
+		}
+		for(int i = topologicalSort.size()-1; i >= 0; i--) {
+			System.out.print(" " + topologicalSort.get(i));
+		}
+		System.out.println();
 	}
 
 }
